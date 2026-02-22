@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechMind AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<meta name="theme-color" content="#06b6d4">
+<style>
+  .scale-100 { transform: scale(1); opacity: 1; }
+  .scale-95 { transform: scale(0.95); opacity: 0; }
+  body { background: radial-gradient(circle at center, #111 0%, #000 100%); }
+</style>
+</head>
+<body class="text-white h-screen flex flex-col">
+
+<header class="p-4 border-b border-cyan-500/30 flex items-center gap-3 bg-black/50 backdrop-blur-md">
+  <div class="w-10 h-10 bg-cyan-500 rounded-lg flex items-center justify-center text-black font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)]">TM</div>
+  <h1 class="text-xl font-bold tracking-tight">TechMind AI</h1>
+</header>
+
+<main id="chat" class="flex-1 overflow-y-auto p-4 space-y-4">
+  <div class="bg-zinc-800/50 p-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-md max-w-[80%]">
+    👋 أهلاً بك في TechMind AI<br>أنا الآن متصل بالسيرفر وجاهز للرد على أسئلتك.. اسألني أي شيء! 👇
+  </div>
+</main>
+
+<footer class="p-4 border-t border-white/10 bg-black/50 backdrop-blur-lg flex gap-2">
+  <input id="input" type="text" placeholder="اكتب سؤالك هنا..." class="flex-1 bg-zinc-900/50 p-3 rounded-2xl border border-white/10 outline-none focus:border-cyan-500 transition-all"/>
+  <button id="sendBtn" class="bg-cyan-500 hover:bg-cyan-400 text-black px-6 py-3 rounded-2xl font-bold transition-transform active:scale-95">إرسال</button>
+</footer>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("sendBtn");
+
+// رابط السيرفر بتاعك على Vercel
+const BASE_URL = "https://techmind-backend.vercel.app";
+
+const USER_ID = localStorage.getItem("userId") || ("user-" + Math.random().toString(36).slice(2));
+localStorage.setItem("userId", USER_ID);
+
+function bubble(text, user=false) {
+  const div = document.createElement("div");
+  div.className = `p-4 rounded-2xl max-w-[85%] ${user ? "bg-cyan-600 text-white ml-auto" : "bg-zinc-800 text-gray-100 mr-auto"} border border-white/10 shadow-xl transform transition-all duration-300 scale-95 opacity-0`;
+  div.innerText = text;
+  chat.appendChild(div);
+  setTimeout(() => { div.classList.replace("scale-95", "scale-100"); div.classList.replace("opacity-0", "opacity-100"); }, 10);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function send() {
+  const text = input.value.trim();
+  if(!text) return;
+
+  bubble(text, true);
+  input.value = "";
+
+  const loading = document.createElement("div");
+  loading.className = "bg-zinc-800/30 p-3 rounded-2xl mr-auto border border-white/10 animate-pulse text-cyan-400";
+  loading.innerText = "⚡ ذكاء TechMind يفكر...";
+  chat.appendChild(loading);
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    // التعديل السحري هنا الربط بالسيرفر
+    const endpoint = text.startsWith("ارسم") ? "/image" : "/ask";
+    
+    const res = await fetch(BASE_URL + endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: text, userId: USER_ID })
+    });
+
+    const data = await res.json();
+    loading.remove();
+
+    if(text.startsWith("ارسم") && data.image) {
+      const img = document.createElement("img");
+      img.src = "data:image/png;base64," + data.image;
+      img.className = "rounded-2xl max-w-full border border-white/20 shadow-2xl mt-2";
+      chat.appendChild(img);
+    } else {
+      bubble(data.answer || "السيرفر لم يرسل رداً", false);
+    }
+  } catch(e) {
+    loading.remove();
+    bubble("❌ خطأ: تأكد من تشغيل السيرفر أو اتصال الإنترنت.", false);
+    console.error(e);
+  }
+  chat.scrollTop = chat.scrollHeight;
+}
+
+sendBtn.onclick = send;
+input.addEventListener("keypress", e => { if(e.key==="Enter") send(); });
+</script>
+</body>
+</html>
